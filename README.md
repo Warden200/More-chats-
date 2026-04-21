@@ -2,8 +2,8 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>More chats!</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P2P Мессенджер - Улучшенная версия</title>
     <style>
         * {
             margin: 0;
@@ -12,7 +12,7 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             height: 100vh;
             display: flex;
@@ -26,19 +26,19 @@
             border-radius: 20px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             width: 100%;
-            max-width: 1200px;
+            max-width: 1300px;
             height: 90vh;
             display: flex;
             overflow: hidden;
         }
 
-        /* Sidebar */
         .sidebar {
-            width: 300px;
+            width: 320px;
             background: #f8f9fa;
             border-right: 1px solid #e0e0e0;
             display: flex;
             flex-direction: column;
+            overflow-y: auto;
         }
 
         .user-info {
@@ -64,7 +64,7 @@
             border-bottom: 1px solid #e0e0e0;
         }
 
-        input {
+        input, select {
             width: 100%;
             padding: 10px;
             border: 1px solid #ddd;
@@ -83,7 +83,7 @@
             cursor: pointer;
             font-size: 14px;
             font-weight: 600;
-            transition: transform 0.2s, background 0.2s;
+            transition: all 0.2s;
         }
 
         button:hover {
@@ -91,22 +91,22 @@
             transform: translateY(-1px);
         }
 
-        button:active {
-            transform: translateY(0);
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 8px;
         }
 
-        button.danger {
-            background: #e53e3e;
-        }
-
-        button.danger:hover {
-            background: #c53030;
-        }
+        .status-connected { background: #48bb78; color: white; }
+        .status-connecting { background: #ed8936; color: white; }
+        .status-failed { background: #e53e3e; color: white; }
 
         .connections-list {
             flex: 1;
             padding: 20px;
-            overflow-y: auto;
         }
 
         .connection-item {
@@ -115,13 +115,8 @@
             border-radius: 10px;
             margin-bottom: 10px;
             cursor: pointer;
-            transition: all 0.2s;
             border: 2px solid transparent;
-        }
-
-        .connection-item:hover {
-            transform: translateX(5px);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.2s;
         }
 
         .connection-item.active {
@@ -129,36 +124,16 @@
             background: #f0f4ff;
         }
 
-        .connection-name {
-            font-weight: 600;
-            color: #333;
-            word-break: break-all;
-            font-size: 13px;
-        }
-
-        .connection-status {
-            font-size: 11px;
-            color: #48bb78;
-            margin-top: 4px;
-        }
-
-        /* Chat area */
         .chat-area {
             flex: 1;
             display: flex;
             flex-direction: column;
-            background: #ffffff;
         }
 
         .chat-header {
             padding: 20px;
             background: white;
             border-bottom: 1px solid #e0e0e0;
-        }
-
-        .chat-header h3 {
-            color: #333;
-            font-size: 18px;
         }
 
         .messages {
@@ -171,18 +146,13 @@
         }
 
         .message {
+            max-width: 70%;
             display: flex;
             flex-direction: column;
-            max-width: 70%;
         }
 
-        .message.sent {
-            align-self: flex-end;
-        }
-
-        .message.received {
-            align-self: flex-start;
-        }
+        .message.sent { align-self: flex-end; }
+        .message.received { align-self: flex-start; }
 
         .message-bubble {
             padding: 10px 15px;
@@ -209,10 +179,6 @@
             margin-left: 10px;
         }
 
-        .message.sent .message-time {
-            text-align: right;
-        }
-
         .message-input-area {
             padding: 20px;
             border-top: 1px solid #e0e0e0;
@@ -221,13 +187,23 @@
         }
 
         .message-input-area input {
-            flex: 1;
             margin-bottom: 0;
         }
 
         .message-input-area button {
             width: auto;
             padding: 10px 20px;
+        }
+
+        .debug-panel {
+            background: #2d3748;
+            color: #a0aec0;
+            padding: 10px;
+            font-size: 11px;
+            font-family: monospace;
+            border-top: 1px solid #4a5568;
+            max-height: 150px;
+            overflow-y: auto;
         }
 
         .empty-state {
@@ -237,13 +213,8 @@
         }
 
         @media (max-width: 768px) {
-            .sidebar {
-                width: 250px;
-            }
-            
-            .message {
-                max-width: 85%;
-            }
+            .sidebar { width: 280px; }
+            .message { max-width: 85%; }
         }
     </style>
 </head>
@@ -251,229 +222,363 @@
     <div class="container">
         <div class="sidebar">
             <div class="user-info">
-                <strong>Ваш ID:</strong>
+                <strong>🆔 Ваш ID:</strong>
                 <div class="user-id" id="myUserId">Загрузка...</div>
-                <button id="copyIdBtn" style="margin-top: 10px; background: #48bb78;">📋 Скопировать ID</button>
+                <button id="copyIdBtn" style="background: #48bb78; margin-top: 8px;">📋 Копировать</button>
+                <div id="connectionStatus"></div>
             </div>
             
             <div class="connection-panel">
-                <input type="text" id="remoteUserId" placeholder="Введите ID собеседника">
+                <input type="text" id="remoteUserId" placeholder="ID собеседника">
+                <select id="signalingMethod">
+                    <option value="auto">🔄 Авто (рекомендуется)</option>
+                    <option value="local">💻 Локальный (BroadcastChannel)</option>
+                    <option value="manual">📋 Ручной обмен (копировать/вставить)</option>
+                </select>
                 <button id="connectBtn">🔗 Подключиться</button>
+                <button id="retryBtn" style="background: #ed8936; margin-top: 5px;">🔄 Повторить подключение</button>
             </div>
             
             <div class="connections-list">
-                <div style="font-weight: 600; margin-bottom: 10px; color: #666;">📱 Активные чаты:</div>
+                <div style="font-weight: 600; margin-bottom: 10px;">💬 Активные чаты:</div>
                 <div id="connectionsList"></div>
             </div>
         </div>
         
         <div class="chat-area">
             <div class="chat-header">
-                <h3 id="currentChatTitle">Выберите чат</h3>
+                <h3 id="currentChatTitle">📡 Выберите чат</h3>
             </div>
             <div class="messages" id="messages">
-                <div class="empty-state">💬 Выберите собеседника для начала общения</div>
+                <div class="empty-state">💡 Совет: используйте ручной режим, если автоматическое подключение не работает</div>
             </div>
             <div class="message-input-area">
-                <input type="text" id="messageInput" placeholder="Введите сообщение..." disabled>
+                <input type="text" id="messageInput" placeholder="Сообщение..." disabled>
                 <button id="sendBtn" disabled>📤 Отправить</button>
+            </div>
+            <div class="debug-panel" id="debugPanel">
+                [Система] Мессенджер запущен. Ваш ID сгенерирован.<br>
             </div>
         </div>
     </div>
 
     <script>
-        // Конфигурация Signaling сервера (публичный бесплатный сервер для обмена сигналами)
-        // Это единственная зависимость - сервер для обмена метаданными WebRTC
-        // Сам обмен сообщениями идет напрямую P2P
+        // Расширенная конфигурация ICE с множеством серверов
         const configuration = {
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' },
                 { urls: 'stun:stun1.l.google.com:19302' },
-                { urls: 'stun:stun2.l.google.com:19302' }
-            ]
+                { urls: 'stun:stun2.l.google.com:19302' },
+                { urls: 'stun:stun3.l.google.com:19302' },
+                { urls: 'stun:stun4.l.google.com:19302' },
+                { urls: 'stun:stun.stunprotocol.org:3478' },
+                {
+                    urls: 'turn:openrelay.metered.ca:80',
+                    username: 'openrelayproject',
+                    credential: 'openrelayproject'
+                },
+                {
+                    urls: 'turn:openrelay.metered.ca:443',
+                    username: 'openrelayproject',
+                    credential: 'openrelayproject'
+                }
+            ],
+            iceCandidatePoolSize: 10
         };
         
-        // Генерируем уникальный ID пользователя
-        function generateUserId() {
-            return 'user_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
-        }
-        
-        let myUserId = localStorage.getItem('p2p_user_id');
+        let myUserId = localStorage.getItem('p2p_user_id_v2');
         if (!myUserId) {
-            myUserId = generateUserId();
-            localStorage.setItem('p2p_user_id', myUserId);
+            myUserId = 'user_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+            localStorage.setItem('p2p_user_id_v2', myUserId);
         }
         
         document.getElementById('myUserId').textContent = myUserId;
         
+        // Логирование
+        function addDebugLog(message, type = 'info') {
+            const debugPanel = document.getElementById('debugPanel');
+            const time = new Date().toLocaleTimeString();
+            const colors = { info: '#a0aec0', success: '#48bb78', error: '#f56565', warning: '#ed8936' };
+            debugPanel.innerHTML += `<div style="color: ${colors[type] || colors.info}">[${time}] ${message}</div>`;
+            debugPanel.scrollTop = debugPanel.scrollHeight;
+            console.log(`[${type}]`, message);
+        }
+        
         // Копирование ID
         document.getElementById('copyIdBtn').onclick = () => {
             navigator.clipboard.writeText(myUserId);
-            alert('ID скопирован!');
+            addDebugLog('✅ ID скопирован в буфер обмена', 'success');
         };
         
         // Хранилище соединений
-        const connections = new Map(); // key: userId, value: { peerConnection, dataChannel, status }
+        const connections = new Map();
         let activeChat = null;
-        let messageHandlers = new Map();
         
-        // Signaling через BroadcastChannel (для одного домена/вкладки)
-        // Для разных пользователей используем localStorage события
-        // Это позволяет работать без внешнего сервера в пределах одного домена
-        const signalingChannel = new BroadcastChannel('p2p_signaling');
+        // Сигналинг через разные методы
+        let signalingMethod = 'auto';
+        let pendingOffers = new Map(); // для ручного режима
         
-        // Отправка сигнала
-        function sendSignal(targetUserId, signal) {
-            const signalData = {
-                from: myUserId,
-                to: targetUserId,
-                signal: signal,
-                timestamp: Date.now()
-            };
-            signalingChannel.postMessage(signalData);
-            
-            // Также сохраняем в localStorage для обнаружения новых пользователей
-            const pendingSignals = JSON.parse(localStorage.getItem('p2p_signals') || '{}');
-            if (!pendingSignals[targetUserId]) pendingSignals[targetUserId] = [];
-            pendingSignals[targetUserId].push(signalData);
-            localStorage.setItem('p2p_signals', JSON.stringify(pendingSignals));
-        }
-        
-        // Обработка входящих сигналов
-        signalingChannel.onmessage = (event) => {
-            const { from, to, signal } = event.data;
-            if (to === myUserId) {
-                handleSignal(from, signal);
-            }
-        };
-        
-        // Проверка непрочитанных сигналов при загрузке
-        function checkPendingSignals() {
-            const pendingSignals = JSON.parse(localStorage.getItem('p2p_signals') || '{}');
-            for (const [fromUserId, signals] of Object.entries(pendingSignals)) {
-                signals.forEach(signalData => {
-                    if (signalData.to === myUserId) {
-                        handleSignal(fromUserId, signalData.signal);
-                    }
-                });
-            }
-            localStorage.removeItem('p2p_signals');
-        }
-        
-        // Обработка сигналов WebRTC
-        async function handleSignal(fromUserId, signal) {
-            let connection = connections.get(fromUserId);
-            
-            if (!connection) {
-                // Создаем новое соединение
-                connection = await createPeerConnection(fromUserId);
-                connections.set(fromUserId, connection);
+        // Обновление статуса подключения в UI
+        function updateConnectionStatus(userId, status, message = '') {
+            const conn = connections.get(userId);
+            if (conn) {
+                conn.status = status;
+                const statusDiv = document.getElementById(`status_${userId}`);
+                if (statusDiv) {
+                    const statusText = status === 'connected' ? '🟢 Онлайн' : (status === 'connecting' ? '🟡 Подключение...' : '🔴 Ошибка');
+                    statusDiv.innerHTML = statusText;
+                    if (message) statusDiv.title = message;
+                }
                 updateConnectionsList();
-            }
-            
-            if (signal.type === 'offer') {
-                await connection.peerConnection.setRemoteDescription(new RTCSessionDescription(signal));
-                const answer = await connection.peerConnection.createAnswer();
-                await connection.peerConnection.setLocalDescription(answer);
-                sendSignal(fromUserId, connection.peerConnection.localDescription);
-            } else if (signal.type === 'answer') {
-                await connection.peerConnection.setRemoteDescription(new RTCSessionDescription(signal));
-            } else if (signal.type === 'candidate') {
-                await connection.peerConnection.addIceCandidate(new RTCIceCandidate(signal.candidate));
+                
+                // Обновляем активный чат
+                if (activeChat === userId && status === 'connected') {
+                    document.getElementById('messageInput').disabled = false;
+                    document.getElementById('sendBtn').disabled = false;
+                } else if (activeChat === userId && status !== 'connected') {
+                    document.getElementById('messageInput').disabled = true;
+                    document.getElementById('sendBtn').disabled = true;
+                }
             }
         }
         
-        // Создание peer connection
-        async function createPeerConnection(remoteUserId) {
+        // Создание PeerConnection
+        async function createPeerConnection(remoteUserId, isInitiator = true) {
+            addDebugLog(`🔧 Создание соединения с ${remoteUserId} (инициатор: ${isInitiator})`, 'info');
+            
             const peerConnection = new RTCPeerConnection(configuration);
-            const dataChannel = peerConnection.createDataChannel('chat');
+            let dataChannel = null;
             
-            dataChannel.onopen = () => {
-                console.log('Data channel opened with', remoteUserId);
-                const conn = connections.get(remoteUserId);
-                if (conn) {
-                    conn.status = 'connected';
-                    updateConnectionsList();
-                    
-                    // Автоматически открываем чат при подключении
-                    if (!activeChat) {
-                        setActiveChat(remoteUserId);
-                    }
-                }
-            };
-            
-            dataChannel.onmessage = (event) => {
-                const message = JSON.parse(event.data);
-                receiveMessage(remoteUserId, message);
-            };
-            
-            dataChannel.onclose = () => {
-                console.log('Data channel closed with', remoteUserId);
-                const conn = connections.get(remoteUserId);
-                if (conn) {
-                    conn.status = 'disconnected';
-                    updateConnectionsList();
-                }
-            };
+            if (isInitiator) {
+                dataChannel = peerConnection.createDataChannel('chat');
+                setupDataChannel(dataChannel, remoteUserId);
+            }
             
             peerConnection.ondatachannel = (event) => {
-                const channel = event.channel;
-                channel.onmessage = (e) => {
-                    const message = JSON.parse(e.data);
-                    receiveMessage(remoteUserId, message);
-                };
-                channel.onopen = () => {
-                    const conn = connections.get(remoteUserId);
-                    if (conn) {
-                        conn.status = 'connected';
-                        updateConnectionsList();
-                    }
-                };
-                connections.get(remoteUserId).dataChannel = channel;
+                addDebugLog(`📡 Получен data channel от ${remoteUserId}`, 'success');
+                dataChannel = event.channel;
+                setupDataChannel(dataChannel, remoteUserId);
             };
             
             peerConnection.onicecandidate = (event) => {
                 if (event.candidate) {
+                    addDebugLog(`🔌 ICE кандидат для ${remoteUserId}: ${event.candidate.candidate.substring(0, 50)}...`, 'info');
                     sendSignal(remoteUserId, {
                         type: 'candidate',
                         candidate: event.candidate
                     });
+                } else {
+                    addDebugLog(`✅ ICE gathering завершён для ${remoteUserId}`, 'success');
                 }
             };
             
-            return {
+            peerConnection.oniceconnectionstatechange = () => {
+                addDebugLog(`🔄 ICE состояние для ${remoteUserId}: ${peerConnection.iceConnectionState}`, 'info');
+                if (peerConnection.iceConnectionState === 'connected') {
+                    updateConnectionStatus(remoteUserId, 'connected');
+                    addDebugLog(`🎉 Соединение с ${remoteUserId} установлено!`, 'success');
+                } else if (peerConnection.iceConnectionState === 'failed') {
+                    updateConnectionStatus(remoteUserId, 'failed', 'ICE соединение не удалось');
+                    addDebugLog(`❌ Ошибка ICE для ${remoteUserId}`, 'error');
+                } else if (peerConnection.iceConnectionState === 'disconnected') {
+                    updateConnectionStatus(remoteUserId, 'connecting');
+                }
+            };
+            
+            function setupDataChannel(channel, userId) {
+                channel.onopen = () => {
+                    addDebugLog(`🔓 Data channel открыт с ${userId}`, 'success');
+                    updateConnectionStatus(userId, 'connected');
+                };
+                channel.onclose = () => {
+                    addDebugLog(`🔒 Data channel закрыт с ${userId}`, 'warning');
+                    updateConnectionStatus(userId, 'connecting');
+                };
+                channel.onmessage = (event) => {
+                    const message = JSON.parse(event.data);
+                    receiveMessage(userId, message);
+                };
+            }
+            
+            return { peerConnection, dataChannel };
+        }
+        
+        // Отправка сигнала (разные методы)
+        function sendSignal(targetUserId, signal) {
+            const method = document.getElementById('signalingMethod').value;
+            
+            if (method === 'manual') {
+                // Ручной режим - показываем SDP для копирования
+                if (signal.type === 'offer' || signal.type === 'answer') {
+                    const sdp = JSON.stringify({ from: myUserId, to: targetUserId, signal });
+                    addDebugLog(`📋 Скопируйте этот SDP и отправьте собеседнику:`, 'warning');
+                    addDebugLog(`${sdp.substring(0, 200)}...`, 'info');
+                    
+                    // Сохраняем для ручного обмена
+                    const manualData = {
+                        type: signal.type,
+                        sdp: signal.sdp,
+                        from: myUserId
+                    };
+                    localStorage.setItem('p2p_manual_signal', JSON.stringify(manualData));
+                    addDebugLog(`💾 Данные сохранены в localStorage (ключ: p2p_manual_signal)`, 'info');
+                }
+            } else {
+                // Автоматический режим через BroadcastChannel
+                const signalData = { from: myUserId, to: targetUserId, signal, timestamp: Date.now() };
+                const channel = new BroadcastChannel('p2p_signaling_v2');
+                channel.postMessage(signalData);
+                channel.close();
+            }
+        }
+        
+        // Инициирование соединения
+        async function initiateConnection(remoteUserId) {
+            if (connections.has(remoteUserId)) {
+                addDebugLog(`⚠️ Соединение с ${remoteUserId} уже существует`, 'warning');
+                return;
+            }
+            
+            addDebugLog(`🚀 Инициируем подключение к ${remoteUserId}...`, 'info');
+            
+            const { peerConnection, dataChannel } = await createPeerConnection(remoteUserId, true);
+            connections.set(remoteUserId, {
                 peerConnection,
                 dataChannel,
                 status: 'connecting',
                 messages: []
+            });
+            updateConnectionsList();
+            
+            // Создаём offer
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+            sendSignal(remoteUserId, offer);
+            addDebugLog(`📤 Offer отправлен для ${remoteUserId}`, 'success');
+            
+            // Таймаут подключения
+            setTimeout(() => {
+                const conn = connections.get(remoteUserId);
+                if (conn && conn.status !== 'connected') {
+                    addDebugLog(`⏰ Таймаут подключения к ${remoteUserId}`, 'error');
+                    updateConnectionStatus(remoteUserId, 'failed', 'Таймаут подключения');
+                }
+            }, 30000);
+        }
+        
+        // Обработка входящих сигналов
+        async function handleIncomingSignal(fromUserId, signal) {
+            addDebugLog(`📨 Получен сигнал от ${fromUserId}: ${signal.type}`, 'info');
+            
+            let connection = connections.get(fromUserId);
+            
+            if (!connection && signal.type === 'offer') {
+                addDebugLog(`🔄 Создаём ответное соединение для ${fromUserId}`, 'info');
+                const { peerConnection, dataChannel } = await createPeerConnection(fromUserId, false);
+                connection = { peerConnection, dataChannel, status: 'connecting', messages: [] };
+                connections.set(fromUserId, connection);
+                updateConnectionsList();
+            }
+            
+            if (!connection) {
+                addDebugLog(`❌ Нет соединения для ${fromUserId}`, 'error');
+                return;
+            }
+            
+            try {
+                if (signal.type === 'offer') {
+                    await connection.peerConnection.setRemoteDescription(new RTCSessionDescription(signal));
+                    const answer = await connection.peerConnection.createAnswer();
+                    await connection.peerConnection.setLocalDescription(answer);
+                    sendSignal(fromUserId, answer);
+                    addDebugLog(`📤 Answer отправлен для ${fromUserId}`, 'success');
+                } else if (signal.type === 'answer') {
+                    await connection.peerConnection.setRemoteDescription(new RTCSessionDescription(signal));
+                    addDebugLog(`✅ Remote description установлен для ${fromUserId}`, 'success');
+                } else if (signal.type === 'candidate') {
+                    await connection.peerConnection.addIceCandidate(new RTCIceCandidate(signal.candidate));
+                    addDebugLog(`🧊 ICE кандидат добавлен для ${fromUserId}`, 'success');
+                }
+            } catch (error) {
+                addDebugLog(`❌ Ошибка обработки сигнала: ${error.message}`, 'error');
+            }
+        }
+        
+        // Слушаем сигналы
+        function startSignalingListener() {
+            const channel = new BroadcastChannel('p2p_signaling_v2');
+            channel.onmessage = (event) => {
+                const { from, to, signal } = event.data;
+                if (to === myUserId) {
+                    handleIncomingSignal(from, signal);
+                }
+            };
+            addDebugLog(`📡 Слушатель сигналов запущен`, 'success');
+        }
+        
+        // Ручной режим - вставка SDP
+        function setupManualMode() {
+            const manualInput = document.createElement('textarea');
+            manualInput.placeholder = 'Вставьте SDP от собеседника здесь...';
+            manualInput.style.width = '100%';
+            manualInput.style.marginTop = '10px';
+            manualInput.style.padding = '8px';
+            manualInput.style.fontSize = '11px';
+            manualInput.style.fontFamily = 'monospace';
+            manualInput.rows = 3;
+            
+            const manualBtn = document.createElement('button');
+            manualBtn.textContent = '📥 Применить SDP';
+            manualBtn.style.marginTop = '5px';
+            manualBtn.style.background = '#4299e1';
+            
+            const panel = document.querySelector('.connection-panel');
+            panel.appendChild(manualInput);
+            panel.appendChild(manualBtn);
+            
+            manualBtn.onclick = async () => {
+                try {
+                    const data = JSON.parse(manualInput.value);
+                    if (data.from && data.signal) {
+                        await handleIncomingSignal(data.from, data.signal);
+                        addDebugLog(`✅ SDP применён успешно`, 'success');
+                        manualInput.value = '';
+                    } else {
+                        addDebugLog(`❌ Неверный формат SDP`, 'error');
+                    }
+                } catch (e) {
+                    addDebugLog(`❌ Ошибка парсинга SDP: ${e.message}`, 'error');
+                }
             };
         }
         
-        // Инициирование соединения
+        // Кнопки
         document.getElementById('connectBtn').onclick = async () => {
             const remoteUserId = document.getElementById('remoteUserId').value.trim();
             if (!remoteUserId || remoteUserId === myUserId) {
-                alert('Введите корректный ID собеседника (не свой собственный)');
+                addDebugLog(`❌ Введите корректный ID (не свой)`, 'error');
                 return;
             }
-            
-            if (connections.has(remoteUserId)) {
-                alert('Соединение уже существует или устанавливается');
-                return;
-            }
-            
-            const connection = await createPeerConnection(remoteUserId);
-            connections.set(remoteUserId, connection);
-            
-            // Создаем offer
-            const offer = await connection.peerConnection.createOffer();
-            await connection.peerConnection.setLocalDescription(offer);
-            sendSignal(remoteUserId, offer);
-            
-            updateConnectionsList();
+            await initiateConnection(remoteUserId);
         };
         
-        // Обновление списка соединений в UI
+        document.getElementById('retryBtn').onclick = async () => {
+            const remoteUserId = document.getElementById('remoteUserId').value.trim();
+            if (!remoteUserId) {
+                addDebugLog(`❌ Введите ID для повторного подключения`, 'error');
+                return;
+            }
+            
+            const existing = connections.get(remoteUserId);
+            if (existing) {
+                existing.peerConnection.close();
+                connections.delete(remoteUserId);
+                addDebugLog(`🔄 Старое соединение закрыто`, 'info');
+            }
+            await initiateConnection(remoteUserId);
+        };
+        
+        // Обновление списка
         function updateConnectionsList() {
             const container = document.getElementById('connectionsList');
             if (connections.size === 0) {
@@ -483,47 +588,36 @@
             
             let html = '';
             for (const [userId, conn] of connections) {
-                const statusText = conn.status === 'connected' ? '🟢 Онлайн' : '🟡 Подключение...';
+                const statusText = conn.status === 'connected' ? '🟢 Онлайн' : (conn.status === 'connecting' ? '🟡 Подключение...' : '🔴 Ошибка');
                 const activeClass = activeChat === userId ? 'active' : '';
                 html += `
-                    <div class="connection-item ${activeClass}" onclick="setActiveChat('${userId}')">
+                    <div class="connection-item ${activeClass}" onclick="window.setActiveChat('${userId}')">
                         <div class="connection-name">${userId}</div>
-                        <div class="connection-status">${statusText}</div>
+                        <div id="status_${userId}" class="status-badge status-${conn.status === 'connected' ? 'connected' : (conn.status === 'connecting' ? 'connecting' : 'failed')}">${statusText}</div>
                     </div>
                 `;
             }
             container.innerHTML = html;
         }
         
-        // Установка активного чата
         window.setActiveChat = function(userId) {
             activeChat = userId;
             updateConnectionsList();
+            document.getElementById('currentChatTitle').textContent = `💬 Чат с: ${userId.substring(0, 20)}...`;
             
             const conn = connections.get(userId);
             if (conn) {
-                document.getElementById('currentChatTitle').textContent = `Чат с: ${userId}`;
-                const messageInput = document.getElementById('messageInput');
-                const sendBtn = document.getElementById('sendBtn');
-                
-                if (conn.status === 'connected') {
-                    messageInput.disabled = false;
-                    sendBtn.disabled = false;
-                } else {
-                    messageInput.disabled = true;
-                    sendBtn.disabled = true;
-                }
-                
-                // Отображаем историю сообщений
                 displayMessages(userId, conn.messages);
+                const canSend = conn.status === 'connected';
+                document.getElementById('messageInput').disabled = !canSend;
+                document.getElementById('sendBtn').disabled = !canSend;
             }
         };
         
-        // Отображение сообщений
         function displayMessages(userId, messages) {
-            const messagesContainer = document.getElementById('messages');
+            const container = document.getElementById('messages');
             if (!messages || messages.length === 0) {
-                messagesContainer.innerHTML = '<div class="empty-state">💬 Нет сообщений<br>Напишите что-нибудь</div>';
+                container.innerHTML = '<div class="empty-state">💬 Нет сообщений<br>Напишите что-нибудь</div>';
                 return;
             }
             
@@ -538,119 +632,69 @@
                     </div>
                 `;
             });
-            messagesContainer.innerHTML = html;
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            container.innerHTML = html;
+            container.scrollTop = container.scrollHeight;
         }
         
-        // Получение сообщения
         function receiveMessage(fromUserId, message) {
             const conn = connections.get(fromUserId);
             if (conn) {
-                conn.messages.push({
-                    text: message.text,
-                    sender: fromUserId,
-                    timestamp: message.timestamp
-                });
-                
+                conn.messages.push(message);
                 if (activeChat === fromUserId) {
                     displayMessages(fromUserId, conn.messages);
                 }
-                
-                // Уведомление
-                if (activeChat !== fromUserId && Notification.permission === 'granted') {
-                    new Notification('Новое сообщение', {
-                        body: `От ${fromUserId}: ${message.text}`,
-                        icon: 'https://cdn-icons-png.flaticon.com/512/565/565422.png'
-                    });
-                }
+                addDebugLog(`💬 Новое сообщение от ${fromUserId}: ${message.text.substring(0, 50)}`, 'info');
             }
         }
         
-        // Отправка сообщения
-        document.getElementById('sendBtn').onclick = () => {
-            sendMessage();
-        };
-        
+        document.getElementById('sendBtn').onclick = sendMessage;
         document.getElementById('messageInput').onkeypress = (e) => {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
+            if (e.key === 'Enter') sendMessage();
         };
         
         function sendMessage() {
-            if (!activeChat) {
-                alert('Выберите чат');
-                return;
-            }
-            
+            if (!activeChat) return;
             const conn = connections.get(activeChat);
-            if (!conn || conn.status !== 'connected') {
-                alert('Соединение не установлено');
+            if (!conn || conn.status !== 'connected' || !conn.dataChannel || conn.dataChannel.readyState !== 'open') {
+                addDebugLog(`❌ Канал не готов для отправки`, 'error');
                 return;
             }
             
-            const messageInput = document.getElementById('messageInput');
-            const text = messageInput.value.trim();
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
             if (!text) return;
             
-            const message = {
-                text: text,
-                sender: myUserId,
-                timestamp: Date.now()
-            };
-            
-            // Отправляем через data channel
-            if (conn.dataChannel && conn.dataChannel.readyState === 'open') {
-                conn.dataChannel.send(JSON.stringify(message));
-                
-                // Сохраняем в локальной истории
-                conn.messages.push({
-                    text: text,
-                    sender: myUserId,
-                    timestamp: message.timestamp
-                });
-                
-                displayMessages(activeChat, conn.messages);
-                messageInput.value = '';
-            } else {
-                alert('Канал не готов');
-            }
+            const message = { text, sender: myUserId, timestamp: Date.now() };
+            conn.dataChannel.send(JSON.stringify(message));
+            conn.messages.push(message);
+            displayMessages(activeChat, conn.messages);
+            input.value = '';
+            addDebugLog(`📤 Сообщение отправлено ${activeChat}`, 'success');
         }
         
-        // Функция для экранирования HTML
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
         
-        // Запрос уведомлений
-        if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
-            Notification.requestPermission();
-        }
+        // Инициализация
+        startSignalingListener();
+        setupManualMode();
         
-        // Проверяем непрочитанные сигналы при загрузке
-        checkPendingSignals();
-        
-        // Периодически очищаем старые сигналы
+        // Проверка соединения
         setInterval(() => {
-            const pendingSignals = JSON.parse(localStorage.getItem('p2p_signals') || '{}');
-            let changed = false;
-            for (const [userId, signals] of Object.entries(pendingSignals)) {
-                // Удаляем сигналы старше 5 минут
-                const filtered = signals.filter(s => Date.now() - s.timestamp < 300000);
-                if (filtered.length !== signals.length) {
-                    pendingSignals[userId] = filtered;
-                    changed = true;
+            for (const [userId, conn] of connections) {
+                if (conn.dataChannel && conn.dataChannel.readyState === 'open' && conn.status !== 'connected') {
+                    updateConnectionStatus(userId, 'connected');
+                } else if (conn.dataChannel && conn.dataChannel.readyState !== 'open' && conn.status === 'connected') {
+                    updateConnectionStatus(userId, 'connecting');
                 }
             }
-            if (changed) {
-                localStorage.setItem('p2p_signals', JSON.stringify(pendingSignals));
-            }
-        }, 60000);
+        }, 3000);
         
-        // Отображение инструкции
-        console.log('P2P Мессенджер запущен! Ваш ID:', myUserId);
+        addDebugLog(`✅ Мессенджер запущен! Ваш ID: ${myUserId}`, 'success');
+        addDebugLog(`💡 Если подключение зависает - переключитесь на "Ручной обмен"`, 'warning');
     </script>
 </body>
 </html>
